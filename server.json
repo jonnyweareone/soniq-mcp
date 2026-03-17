@@ -1,0 +1,21 @@
+{
+  "name": "soniq-mcp",
+  "version": "1.1.0",
+  "description": "SONIQ Phone System MCP Server — the first telephony MCP server. Make calls, search call memory with vectors, manage users and numbers.",
+  "homepage": "https://soniqlabs.co.uk/developer",
+  "repository": "https://github.com/jonnyweareone/soniq-mcp",
+  "license": "MIT",
+  "transport": { "type": "sse", "url": "https://mcp.soniqlabs.co.uk/sse" },
+  "auth": {
+    "type": "oauth2",
+    "authorization_url": "https://mcp.soniqlabs.co.uk/oauth/authorize",
+    "token_url": "https://mcp.soniqlabs.co.uk/oauth/token",
+    "callback_url": "https://dtosgubmmdqxbeirtbom.supabase.co/functions/v1/mcp-oauth-callback",
+    "client_id": "soniq-mcp",
+    "scopes": ["calls:read","calls:write","contacts:read","contacts:write","memory:read","users:admin","numbers:admin","flows:admin","supervisor:write"]
+  },
+  "tools": 24,
+  "categories": ["telephony","communications","crm","ai"],
+  "support": { "email": "support@soniqlabs.co.uk", "docs": "https://soniqlabs.co.uk/developer" },
+  "privacy_policy": "https://soniqlabs.co.uk/privacy"
+}
