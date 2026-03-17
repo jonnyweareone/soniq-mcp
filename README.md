@@ -210,7 +210,7 @@ The SONIQ MCP server is a proxy to your own SONIQ deployment. No call data, cont
 ## Support
 
 - **Email:** support@soniqlabs.co.uk
-- **Docs:** [https://soniqlabs.co.uk/docs/mcp](https://soniqlabs.co.uk/docs/mcp)
+- **Docs:** [https://soniqlabs.co.uk/developer](https://soniqlabs.co.uk/developer)
 - **Issues:** [https://github.com/jonnyweareone/soniq-mcp/issues](https://github.com/jonnyweareone/soniq-mcp/issues)
 - **Platform:** [https://soniqmail.co.uk](https://soniqmail.co.uk)
 
