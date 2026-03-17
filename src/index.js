@@ -387,13 +387,15 @@ function handleOAuth(req, res, url) {
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Content-Type', 'application/json');
 
-  // GET /oauth/authorize?client_id=...&redirect_uri=...&scope=...&state=...
+  // GET /oauth/authorize?client_id=...&redirect_uri=...&scope=...&state=...&code_challenge=...
   if (url.pathname === '/oauth/authorize' && req.method === 'GET') {
     const clientId = url.searchParams.get('client_id');
     const redirectUri = url.searchParams.get('redirect_uri');
     const scope = url.searchParams.get('scope') || 'calls:read';
     const state = url.searchParams.get('state') || '';
     const responseType = url.searchParams.get('response_type');
+    const codeChallenge = url.searchParams.get('code_challenge') || '';
+    const codeChallengeMethod = url.searchParams.get('code_challenge_method') || 'plain';
 
     if (clientId !== OAUTH_CLIENT_ID) {
       res.writeHead(400); res.end(JSON.stringify({ error: 'invalid_client' })); return;
@@ -422,7 +424,9 @@ button{width:100%;padding:12px;background:#7c3aed;color:white;border:none;border
   <input type="hidden" name="scope" value="${scope}">
   <input type="hidden" name="state" value="${state}">
   <input type="hidden" name="client_id" value="${clientId}">
-  <input type="password" name="api_key" placeholder="SONIQ API Key (sk_live_...)" required>
+  <input type="hidden" name="code_challenge" value="${codeChallenge}">
+  <input type="hidden" name="code_challenge_method" value="${codeChallengeMethod}">
+  <input type="password" name="api_key" placeholder="SONIQ API Key (soniq_live_...)" required>
   <button type="submit">Authorise</button>
 </form>
 <p style="font-size:12px;color:#666">Your API key is used to verify your identity and is not stored by this server.</p>
@@ -441,6 +445,8 @@ button{width:100%;padding:12px;background:#7c3aed;color:white;border:none;border
         const redirectUri = params.get('redirect_uri');
         const scope = params.get('scope') || 'calls:read';
         const state = params.get('state') || '';
+        const codeChallenge = params.get('code_challenge') || '';
+        const codeChallengeMethod = params.get('code_challenge_method') || 'plain';
 
         // Verify the API key against Supabase
         const keyHash = crypto.createHash('sha256').update(apiKey).digest('hex');
@@ -455,7 +461,7 @@ button{width:100%;padding:12px;background:#7c3aed;color:white;border:none;border
         }
 
         const code = crypto.randomBytes(32).toString('hex');
-        oauthCodes.set(code, { org_id: keyRecord.org_id, scope, api_key: apiKey, expires: Date.now() + 600000 });
+        oauthCodes.set(code, { org_id: keyRecord.org_id, scope, api_key: apiKey, expires: Date.now() + 600000, codeChallenge, codeChallengeMethod });
 
         const redirect = new URL(redirectUri);
         redirect.searchParams.set('code', code);
@@ -502,6 +508,23 @@ button{width:100%;padding:12px;background:#7c3aed;color:white;border:none;border
         }
         oauthCodes.delete(code);
 
+        // PKCE verification
+        if (codeData.codeChallenge) {
+          const verifier = params.code_verifier || params['code_verifier'];
+          if (!verifier) {
+            res.writeHead(400); res.end(JSON.stringify({ error: 'invalid_grant', error_description: 'code_verifier required' })); return;
+          }
+          let expectedChallenge;
+          if (codeData.codeChallengeMethod === 'S256') {
+            expectedChallenge = crypto.createHash('sha256').update(verifier).digest('base64url');
+          } else {
+            expectedChallenge = verifier;
+          }
+          if (expectedChallenge !== codeData.codeChallenge) {
+            res.writeHead(400); res.end(JSON.stringify({ error: 'invalid_grant', error_description: 'PKCE verification failed' })); return;
+          }
+        }
+
         const accessToken = crypto.randomBytes(32).toString('hex');
         oauthTokens.set(accessToken, { org_id: codeData.org_id, scope: codeData.scope, api_key: codeData.api_key, expires: Date.now() + 86400000 });
 
@@ -532,6 +555,32 @@ if (USE_HTTP) {
     res.setHeader('Access-Control-Allow-Headers', 'content-type, mcp-session-id, authorization');
 
     if (req.method === 'OPTIONS') { res.writeHead(204); res.end(); return; }
+
+    // RFC 8414 — OAuth 2.0 Authorization Server Metadata
+    // Claude.ai and other MCP clients probe this before showing the Connect flow
+    if (url.pathname === '/.well-known/oauth-authorization-server' ||
+        url.pathname === '/.well-known/openid-configuration') {
+      res.writeHead(200, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({
+        issuer: BASE_URL,
+        authorization_endpoint: `${BASE_URL}/oauth/authorize`,
+        token_endpoint: `${BASE_URL}/oauth/token`,
+        token_endpoint_auth_methods_supported: ['none'],
+        response_types_supported: ['code'],
+        grant_types_supported: ['authorization_code'],
+        scopes_supported: [
+          'calls:read', 'calls:write',
+          'contacts:read', 'contacts:write',
+          'memory:read',
+          'users:admin', 'numbers:admin', 'flows:admin',
+          'supervisor:write',
+        ],
+        code_challenge_methods_supported: ['S256', 'plain'],
+        service_documentation: 'https://soniqlabs.co.uk/developer',
+        ui_locales_supported: ['en-GB'],
+      }));
+      return;
+    }
 
     // OAuth endpoints
     const oauthHandled = handleOAuth(req, res, url);
