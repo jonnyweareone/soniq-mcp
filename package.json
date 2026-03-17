@@ -1,0 +1,23 @@
+{
+  "name": "soniq-mcp",
+  "version": "1.1.0",
+  "description": "SONIQ MCP Server — The first telephony Model Context Protocol server",
+  "type": "module",
+  "main": "src/index.js",
+  "bin": { "soniq-mcp": "src/index.js" },
+  "scripts": {
+    "start": "node src/index.js",
+    "start:stdio": "MCP_TRANSPORT=stdio node src/index.js",
+    "dev": "MCP_TRANSPORT=http node --watch src/index.js"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.0.4",
+    "@supabase/supabase-js": "^2.47.0",
+    "dotenv": "^16.4.7"
+  },
+  "engines": { "node": ">=20" },
+  "keywords": ["mcp", "telephony", "voip", "phone", "calls", "soniq", "model-context-protocol"],
+  "license": "MIT",
+  "homepage": "https://soniqlabs.co.uk",
+  "repository": { "type": "git", "url": "https://github.com/jonnyweareone/soniq-mcp" }
+}
